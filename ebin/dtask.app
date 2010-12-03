@@ -1,0 +1,8 @@
+{application,dtask,
+             [{description,"Distributed task executor"},
+              {vsn,"0.1"},
+              {registered,[]},
+              {applications,[kernel,stdlib]},
+              {mod,{dtask_app,[]}},
+              {env,[]},
+              {modules,[dtask_app,dtask_sup,dtask_timer]}]}.
