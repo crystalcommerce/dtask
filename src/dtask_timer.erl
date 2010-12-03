@@ -163,5 +163,4 @@ remove_task(TRef, Tasks) ->
                 end, {not_found, []}, Tasks).
 
 dist_exec(Module, Function, Arguments) ->
-    io:format(user, "HERE~n~n~n~n", []),
     apply(Module, Function, Arguments).
