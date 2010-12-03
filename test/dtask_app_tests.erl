@@ -10,11 +10,15 @@ generate_application_test_() ->
      fun stop_app/1,
      [
       ?_test(dtask_sup_is_running()),
+      ?_test(dtask_is_running()),
       ?_test(dtask_timer_is_running())
      ]}.
 
 dtask_sup_is_running() ->
     ?assertNot(undefined == whereis(dtask_sup)).
+
+dtask_is_running() ->
+    ?assertNot(undefined == global:whereis_name(dtask)).
 
 dtask_timer_is_running() ->
     ?assertNot(undefined == global:whereis_name(dtask_timer)).

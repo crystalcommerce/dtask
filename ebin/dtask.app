@@ -5,4 +5,4 @@
               {applications,[kernel,stdlib]},
               {mod,{dtask_app,[]}},
               {env,[]},
-              {modules,[dtask_app,dtask_sup,dtask_timer]}]}.
+              {modules,[dtask,dtask_app,dtask_sup,dtask_timer]}]}.
