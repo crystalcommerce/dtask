@@ -17,7 +17,9 @@ node_list_test_() ->
      ?_test(seek_returns_list_with_focus_on_element()),
      ?_test(seek_returns_an_error_if_the_element_isnt_found()),
      ?_test(seek_returns_an_error_on_empty_lists()),
-     ?_test(drop_removes_the_current_element())
+     ?_test(drop_removes_the_current_element()),
+     ?_test(step_returns_self_on_empty_list()),
+     ?_test(adding_to_empty_list_focuses_new_element())
     ].
 
 focus_on_empty_list_is_undefined() ->
@@ -39,6 +41,10 @@ step_while_focus_on_last_returns_focus_to_start() ->
     First = dtask_node_list:step(Third),
     ?assertMatch(a, dtask_node_list:focus(First)).
 
+step_returns_self_on_empty_list() ->
+    List = dtask_node_list:new([]),
+    ?assertMatch(List, dtask_node_list:step(List)).
+
 size_returns_zero_with_no_nodes() ->
     ?assertMatch(0, dtask_node_list:size(dtask_node_list:new([]))).
 
@@ -48,6 +54,10 @@ size_returns_the_number_of_nodes() ->
 add_increases_the_size_of_the_list() ->
     Original = dtask_node_list:new([a, b, c]),
     ?assertMatch(4, dtask_node_list:size(dtask_node_list:add(d, Original))).
+
+adding_to_empty_list_focuses_new_element() ->
+    List = dtask_node_list:add(a, dtask_node_list:new([])),
+    ?assertMatch(a, dtask_node_list:focus(List)).
 
 seek_returns_list_with_focus_on_element() ->
     {ok, New} = dtask_node_list:seek(c, dtask_node_list:new([a, b, c, d])),

@@ -15,13 +15,12 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--type tref() :: integer().
--type args() :: list().
+-type tref() :: reference().
 
 -record(task, { id        :: tref(),
                 module    :: module(),
                 function  :: term(),
-                arguments :: args() }).
+                arguments :: dtask:args() }).
 
 %%%==========================================================================
 %%% API
@@ -44,7 +43,7 @@ start_link() ->
 %%  Returns {ok, TRef} or {error, Reason}
 %% @end
 %%---------------------------------------------------------------------------
--spec schedule(timeout(), module(), term(), args()) ->
+-spec schedule(timeout(), module(), term(), dtask:args()) ->
                       {ok, tref()} | {error, term()}.
 schedule(Time, Module, Function, Arguments) ->
     gen_server:call({global, ?MODULE},
@@ -67,7 +66,7 @@ cancel(TRef) ->
 %%  Execute a Fun on one of the registered worker nodes for DTask.
 %% @end
 %%---------------------------------------------------------------------------
--spec execute(module(), term(), args()) -> ok.
+-spec execute(module(), term(), dtask:args()) -> ok.
 execute(Module, Function, Arguments) ->
     gen_server:cast({global, ?MODULE},
                     {execute, Module, Function, Arguments}).

@@ -62,6 +62,8 @@ focus({Cursor, _List}) ->
 %% @end
 %%---------------------------------------------------------------------------
 -spec step(node_list()) -> node_list().
+step({[], []}) ->
+    {[], []};
 step({[_Element | []], List}) ->
     {List, List};
 step({[_Element | Tail], List}) ->
@@ -85,6 +87,8 @@ size({_Cursor, List}) ->
 %% @end
 %%---------------------------------------------------------------------------
 -spec add(any(), node_list()) -> node_list().
+add(Node, {[], []}) ->
+    {[Node], [Node]};
 add(Node, {_Cursor, List}) ->
     {_Cursor, [Node | List]}.
 
