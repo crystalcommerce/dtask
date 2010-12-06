@@ -37,7 +37,9 @@ cancel_returns_error_with_invalid_tref() ->
 
 cancel_removes_the_task() ->
     {ok, TRef} = dtask_timer:schedule(5000, io, format, ["Test", []]),
+    {ok, LeaveAlone} = dtask_timer:schedule(5000, io, format, ["AnotherTest", []]),
     {ok, cancel} = dtask_timer:cancel(TRef),
+    {ok, cancel} = dtask_timer:cancel(LeaveAlone),
     ?assertMatch({error, badarg}, dtask_timer:cancel(TRef)).
 
 start_dtask_timer() ->

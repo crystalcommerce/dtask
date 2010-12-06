@@ -19,7 +19,8 @@ node_list_test_() ->
      ?_test(seek_returns_an_error_on_empty_lists()),
      ?_test(drop_removes_the_current_element()),
      ?_test(step_returns_self_on_empty_list()),
-     ?_test(adding_to_empty_list_focuses_new_element())
+     ?_test(adding_to_empty_list_focuses_new_element()),
+     ?_test(drop_wraps_to_first_element_if_on_last())
     ].
 
 focus_on_empty_list_is_undefined() ->
@@ -75,3 +76,9 @@ drop_removes_the_current_element() ->
     Original = dtask_node_list:new([a, b, c, d]),
     Expected = dtask_node_list:new([b, c, d]),
     ?assertMatch(Expected, dtask_node_list:drop(Original)).
+
+drop_wraps_to_first_element_if_on_last() ->
+    Second = dtask_node_list:step(dtask_node_list:new([a, b, c])),
+    Third = dtask_node_list:step(Second),
+    First = dtask_node_list:drop(Third),
+    ?assertMatch(a, dtask_node_list:focus(First)).
