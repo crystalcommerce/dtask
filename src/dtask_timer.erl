@@ -15,9 +15,7 @@
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
          terminate/2, code_change/3]).
 
--type tref() :: reference().
-
--record(task, { id        :: tref(),
+-record(task, { id        :: timer:tref(),
                 module    :: module(),
                 function  :: term(),
                 arguments :: dtask:args() }).
@@ -44,7 +42,7 @@ start_link() ->
 %% @end
 %%---------------------------------------------------------------------------
 -spec schedule(timeout(), module(), term(), dtask:args()) ->
-                      {ok, tref()} | {error, term()}.
+                      {ok, timer:tref()} | {error, term()}.
 schedule(Time, Module, Function, Arguments) ->
     gen_server:call({global, ?MODULE},
                     {schedule, Time, Module, Function, Arguments}).
@@ -57,7 +55,7 @@ schedule(Time, Module, Function, Arguments) ->
 %%  Returns {ok, cancel} or {error, Reason}
 %% @end
 %%---------------------------------------------------------------------------
--spec cancel(tref()) -> {ok, cancel} | {error, term()}.
+-spec cancel(timer:tref()) -> {ok, cancel} | {error, term()}.
 cancel(TRef) ->
     gen_server:call({global, ?MODULE}, {cancel, TRef}).
 
@@ -128,6 +126,8 @@ code_change(_OldVsn, S, _Extra) ->
 %%%==========================================================================
 %%% helper functions
 %%%==========================================================================
+-spec create_task(timeout(), module(), term(), dtask:args()) ->
+                         #task{}.
 create_task(Timeout, Module, Function, Arguments) ->
     {ok, TRef} = timer:apply_interval(Timeout,
                                       dtask,
