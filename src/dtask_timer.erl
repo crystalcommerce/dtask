@@ -9,7 +9,7 @@
 -behavior(gen_server).
 
 %% API
--export([start_link/0, schedule/4, cancel/1, execute/3]).
+-export([start_link/0, schedule/4, cancel/1]).
 
 %% gen_server callbacks
 -export([init/1, handle_call/3, handle_cast/2, handle_info/2,
@@ -61,16 +61,6 @@ schedule(Time, Module, Function, Arguments) ->
 cancel(TRef) ->
     gen_server:call({global, ?MODULE}, {cancel, TRef}).
 
-%%---------------------------------------------------------------------------
-%% @doc
-%%  Execute a Fun on one of the registered worker nodes for DTask.
-%% @end
-%%---------------------------------------------------------------------------
--spec execute(module(), term(), dtask:args()) -> ok.
-execute(Module, Function, Arguments) ->
-    gen_server:cast({global, ?MODULE},
-                    {execute, Module, Function, Arguments}).
-
 %%%==========================================================================
 %%% gen_server callbacks
 %%%==========================================================================
@@ -106,9 +96,6 @@ handle_call(stop, _From, Tasks) ->
 %% @doc
 %% @end
 %%---------------------------------------------------------------------------
-handle_cast({execute, Module, Function, Arguments}, Tasks) ->
-    dist_exec(Module, Function, Arguments),
-    {noreply, Tasks};
 handle_cast(stop, S) ->
     {stop, normal, S};
 handle_cast(_Msg, S) ->
@@ -143,8 +130,8 @@ code_change(_OldVsn, S, _Extra) ->
 %%%==========================================================================
 create_task(Timeout, Module, Function, Arguments) ->
     {ok, TRef} = timer:apply_interval(Timeout,
-                                      dtask_timer,
-                                      execute,
+                                      dtask,
+                                      cast,
                                       [Module, Function, Arguments]),
     #task{ id        = TRef,
            module    = Module,
@@ -160,6 +147,3 @@ remove_task(TRef, Tasks) ->
                                 {T, [Task | Remaining]}
                         end
                 end, {not_found, []}, Tasks).
-
-dist_exec(Module, Function, Arguments) ->
-    apply(Module, Function, Arguments).
