@@ -6,14 +6,24 @@
 %%%-------------------------------------------------------------------------
 -module(dtask_timer).
 
--behavior(gen_server).
+-behavior(gen_leader).
 
 %% API
 -export([start_link/0, schedule/4, cancel/1]).
 
-%% gen_server callbacks
--export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-         terminate/2, code_change/3]).
+%% gen_leader callbacks
+-export([init/1,
+         handle_call/4,
+         handle_cast/3,
+         handle_info/2,
+         handle_leader_call/4,
+         handle_leader_cast/3,
+         handle_DOWN/3,
+         elected/3,
+         surrendered/3,
+         from_leader/3,
+         terminate/2,
+         code_change/4]).
 
 -record(task, { id        :: timer:tref(),
                 module    :: module(),
@@ -30,7 +40,12 @@
 %% @end
 %%---------------------------------------------------------------------------
 start_link() ->
-    gen_server:start_link({global, ?MODULE}, ?MODULE, [], []).
+    gen_leader:start_link(?MODULE,
+                          [node()],
+                          [],
+                          ?MODULE,
+                          [],
+                          []).
 
 %%---------------------------------------------------------------------------
 %% @doc
@@ -44,7 +59,7 @@ start_link() ->
 -spec schedule(timeout(), module(), term(), dtask_srv:args()) ->
                       {ok, timer:tref()} | {error, term()}.
 schedule(Time, Module, Function, Arguments) ->
-    gen_server:call({global, ?MODULE},
+    gen_leader:call(?MODULE,
                     {schedule, Time, Module, Function, Arguments}).
 
 %%---------------------------------------------------------------------------
@@ -57,10 +72,10 @@ schedule(Time, Module, Function, Arguments) ->
 %%---------------------------------------------------------------------------
 -spec cancel(timer:tref()) -> {ok, cancel} | {error, term()}.
 cancel(TRef) ->
-    gen_server:call({global, ?MODULE}, {cancel, TRef}).
+    gen_leader:call(?MODULE, {cancel, TRef}).
 
 %%%==========================================================================
-%%% gen_server callbacks
+%%% gen_leader callbacks
 %%%==========================================================================
 
 %%---------------------------------------------------------------------------
@@ -76,17 +91,17 @@ init([]) ->
 %% @doc
 %% @end
 %%---------------------------------------------------------------------------
-handle_call({schedule, Time, Module, Function, Arguments}, _From, Tasks) ->
+handle_call({schedule, Time, Module, Function, Arguments}, _From, Tasks, _Election) ->
     Task = create_task(Time, Module, Function, Arguments),
     {reply, {ok, Task#task.id}, [Task | Tasks]};
-handle_call({cancel, TRef}, _From, Tasks) ->
+handle_call({cancel, TRef}, _From, Tasks, _Election) ->
     case remove_task(TRef, Tasks) of
         {not_found, _Tasks} ->
             {reply, {error, badarg}, Tasks};
         {_Task, RemainingTasks} ->
             {reply, {ok, cancel}, RemainingTasks}
     end;
-handle_call(stop, _From, Tasks) ->
+handle_call(stop, _From, Tasks, _Election) ->
     {stop, normal, stopped, Tasks}.
 
 %%---------------------------------------------------------------------------
@@ -94,9 +109,9 @@ handle_call(stop, _From, Tasks) ->
 %% @doc
 %% @end
 %%---------------------------------------------------------------------------
-handle_cast(stop, S) ->
+handle_cast(stop, S, _Election) ->
     {stop, normal, S};
-handle_cast(_Msg, S) ->
+handle_cast(_Msg, S, _Election) ->
     {noreply, S}.
 
 %%---------------------------------------------------------------------------
@@ -106,6 +121,27 @@ handle_cast(_Msg, S) ->
 %%---------------------------------------------------------------------------
 handle_info(_Info, S) ->
     {noreply, S}.
+
+handle_leader_call(_Request, _From, State, _Election) ->
+    {reply, ok, State}.
+
+handle_leader_cast(_Request, State, _Election) ->
+    {noreply, State}.
+
+from_leader(_Synch, State, _Election) ->
+    {ok, State}.
+
+handle_DOWN(_Node, State, _Election) ->
+    {ok, State}.
+
+elected(State, _Election, undefined) ->
+    Synch = [],
+    {ok, Synch, State};
+elected(State, _Election, _Node) ->
+    {reply, [], State}.
+
+surrendered(State, _Synch, _Election) ->
+    {ok, State}.
 
 %%---------------------------------------------------------------------------
 %% @private
@@ -120,7 +156,7 @@ terminate(_Reason, _S) ->
 %% @doc
 %% @end
 %%---------------------------------------------------------------------------
-code_change(_OldVsn, S, _Extra) ->
+code_change(_OldVsn, S, _Election, _Extra) ->
     {ok, S}.
 
 %%%==========================================================================

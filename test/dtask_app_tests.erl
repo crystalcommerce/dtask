@@ -18,10 +18,10 @@ dtask_sup_is_running() ->
     ?assertNot(undefined == whereis(dtask_sup)).
 
 dtask_is_running() ->
-    ?assertNot(undefined == global:whereis_name(dtask_srv)).
+    ?assertNot(undefined == whereis(dtask_srv)).
 
 dtask_timer_is_running() ->
-    ?assertNot(undefined == global:whereis_name(dtask_timer)).
+    ?assertNot(undefined == whereis(dtask_timer)).
 
 start_app() ->
     ok = application:start(dtask).

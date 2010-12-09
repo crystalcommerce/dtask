@@ -8,14 +8,24 @@
 %%%--------------------------------------------------------------------------
 -module(dtask_srv).
 
--behavior(gen_server).
+-behavior(gen_leader).
 
 %% API
 -export([start_link/0, call/3, cast/3, register/1]).
 
 %% gen_server callbacks
--export([init/1, handle_call/3, handle_cast/2, handle_info/2,
-         terminate/2, code_change/3]).
+-export([init/1,
+         handle_call/4,
+         handle_cast/3,
+         handle_info/2,
+         handle_leader_call/4,
+         handle_leader_cast/3,
+         handle_DOWN/3,
+         elected/3,
+         surrendered/3,
+         from_leader/3,
+         terminate/2,
+         code_change/4]).
 
 -type args() :: list().
 
@@ -25,7 +35,9 @@
 %%% API
 %%%==========================================================================
 start_link() ->
-    gen_server:start_link({global, ?MODULE},
+    gen_leader:start_link(?MODULE,
+                          [node()],
+                          [],
                           ?MODULE,
                           dtask_node_list:new([]),
                           []).
@@ -39,7 +51,7 @@ start_link() ->
 %%---------------------------------------------------------------------------
 -spec call(module(), term(), args()) -> ok | {error, term()}.
 call(Module, Function, Args) ->
-    gen_server:call({global, ?MODULE}, {apply, Module, Function, Args}).
+    gen_leader:call(?MODULE, {apply, Module, Function, Args}).
 
 %%---------------------------------------------------------------------------
 %% @doc
@@ -50,14 +62,14 @@ call(Module, Function, Args) ->
 %%---------------------------------------------------------------------------
 -spec cast(module(), term(), args()) -> ok. 
 cast(Module, Function, Args) ->
-    gen_server:cast({global, ?MODULE}, {apply, Module, Function, Args}).
+    gen_leader:cast(?MODULE, {apply, Module, Function, Args}).
 
 -spec register(node()) -> ok.
 register(Node) ->
-    gen_server:call({global, ?MODULE}, {register, Node}).
+    gen_leader:call(?MODULE, {register, Node}).
 
 %%%==========================================================================
-%%% gen_server callbacks
+%%% gen_leader callbacks
 %%%==========================================================================
 
 %%---------------------------------------------------------------------------
@@ -73,42 +85,64 @@ init(Nodes) ->
 %%---------------------------------------------------------------------------
 %% @private
 %% @doc
-%%  handle_call gen_server callback
+%%  handle_call gen_leader callback
 %% @end
 %%---------------------------------------------------------------------------
-handle_call(stop, _From, Nodes) ->
+handle_call(stop, _From, Nodes, _Election) ->
     {stop, normal, stopped, Nodes};
 
-handle_call({register, Node}, _From, Nodes) ->
+handle_call({register, Node}, _From, Nodes, _Election) ->
     {reply, ok, dtask_node_list:add(Node, Nodes)};
 
-handle_call({apply, Module, Function, Args}, _From, Nodes) ->
+handle_call({apply, Module, Function, Args}, _From, Nodes, _Election) ->
     {Response, NewNodes} = apply(Module, Function, Args, Nodes),
     {reply, Response, NewNodes}.
 
 %%---------------------------------------------------------------------------
 %% @private
 %% @doc
-%%  handle_cast gen_server callback
+%%  handle_cast gen_leader callback
 %% @end
 %%---------------------------------------------------------------------------
-handle_cast({apply, Module, Function, Args}, Nodes) ->
+handle_cast({apply, Module, Function, Args}, Nodes, _Election) ->
     {_, NewNodes} = apply(Module, Function, Args, Nodes),
     {noreply, NewNodes}.
 
 %%---------------------------------------------------------------------------
 %% @private
 %% @doc
-%%  handle_info gen_server callback
+%%  handle_info gen_leader callback
 %% @end
 %%---------------------------------------------------------------------------
 handle_info(_Info, Nodes) ->
     {noreply, Nodes}.
 
+handle_leader_call(_Request, _From, State, _Election) ->
+    {reply, ok, State}.
+
+handle_leader_cast(_Request, State, _Election) ->
+    {noreply, State}.
+
+from_leader(_Synch, State, _Election) ->
+    {ok, State}.
+
+handle_DOWN(_Node, State, _Election) ->
+    {ok, State}.
+
+elected(State, _Election, undefined) ->
+    Synch = [],
+    {ok, Synch, State};
+elected(State, _Election, _Node) ->
+    {reply, [], State}.
+
+surrendered(State, _Synch, _Election) ->
+    {ok, State}.
+
+
 %%---------------------------------------------------------------------------
 %% @private
 %% @doc
-%%  terminate gen_server callback
+%%  terminate gen_leader callback
 %% @end
 %%---------------------------------------------------------------------------
 terminate(_Reason, _Nodes) ->
@@ -117,10 +151,10 @@ terminate(_Reason, _Nodes) ->
 %%---------------------------------------------------------------------------
 %% @private
 %% @doc
-%%  code_change gen_server callback
+%%  code_change gen_leader callback
 %% @end
 %%---------------------------------------------------------------------------
-code_change(_OldVsn, Nodes, _Extra) ->
+code_change(_OldVsn, Nodes, _Election, _Extra) ->
     {ok, Nodes}.
 
 %%---------------------------------------------------------------------------
