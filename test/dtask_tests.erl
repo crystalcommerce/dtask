@@ -15,18 +15,18 @@ dtask_test_() ->
      ]}.
 
 call_with_no_node_fails() ->
-    ?assertMatch({error, no_node}, dtask:call(?MODULE, ping_self, [ping])).
+    ?assertMatch({error, no_node}, dtask_srv:call(?MODULE, ping_self, [ping])).
 
 call_calls_on_the_focused_node() ->
-    dtask:register(node()),
-    ?assertMatch(pong, dtask:call(?MODULE, ping_self, [ping])).
+    dtask_srv:register(node()),
+    ?assertMatch(pong, dtask_srv:call(?MODULE, ping_self, [ping])).
 
 cast_casts_on_the_focused_node() ->
-    dtask:register(node()),
-    ?assertMatch(ok, dtask:cast(?MODULE, ping_self, [ping])).
+    dtask_srv:register(node()),
+    ?assertMatch(ok, dtask_srv:cast(?MODULE, ping_self, [ping])).
 
 start_dtask() ->
-    {ok, Pid} = dtask:start_link(),
+    {ok, Pid} = dtask_srv:start_link(),
     Pid.
 
 stop_dtask(Pid) ->

@@ -26,7 +26,7 @@ start_link() ->
 init([]) ->
     {ok, { {one_for_one, 5, 10},
            [
-            ?CHILD(dtask, worker),
+            ?CHILD(dtask_srv, worker),
             ?CHILD(dtask_timer, worker)
            ]} }.
 

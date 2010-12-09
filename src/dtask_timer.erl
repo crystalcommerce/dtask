@@ -18,7 +18,7 @@
 -record(task, { id        :: timer:tref(),
                 module    :: module(),
                 function  :: term(),
-                arguments :: dtask:args() }).
+                arguments :: dtask_srv:args() }).
 
 %%%==========================================================================
 %%% API
@@ -41,7 +41,7 @@ start_link() ->
 %%  Returns {ok, TRef} or {error, Reason}
 %% @end
 %%---------------------------------------------------------------------------
--spec schedule(timeout(), module(), term(), dtask:args()) ->
+-spec schedule(timeout(), module(), term(), dtask_srv:args()) ->
                       {ok, timer:tref()} | {error, term()}.
 schedule(Time, Module, Function, Arguments) ->
     gen_server:call({global, ?MODULE},
@@ -126,11 +126,11 @@ code_change(_OldVsn, S, _Extra) ->
 %%%==========================================================================
 %%% helper functions
 %%%==========================================================================
--spec create_task(timeout(), module(), term(), dtask:args()) ->
+-spec create_task(timeout(), module(), term(), dtask_srv:args()) ->
                          #task{}.
 create_task(Timeout, Module, Function, Arguments) ->
     {ok, TRef} = timer:apply_interval(Timeout,
-                                      dtask,
+                                      dtask_srv,
                                       cast,
                                       [Module, Function, Arguments]),
     #task{ id        = TRef,

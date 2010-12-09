@@ -50,8 +50,8 @@ stop_dtask_timer(Pid) ->
     gen_server:call(Pid, stop).
 
 start_dtask() ->
-    {ok, Pid2} = dtask:start_link(),
-    dtask:register(node()),
+    {ok, Pid2} = dtask_srv:start_link(),
+    dtask_srv:register(node()),
     Pid2.
 
 stop_dtask(Pid) ->

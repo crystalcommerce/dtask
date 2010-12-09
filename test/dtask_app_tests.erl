@@ -18,7 +18,7 @@ dtask_sup_is_running() ->
     ?assertNot(undefined == whereis(dtask_sup)).
 
 dtask_is_running() ->
-    ?assertNot(undefined == global:whereis_name(dtask)).
+    ?assertNot(undefined == global:whereis_name(dtask_srv)).
 
 dtask_timer_is_running() ->
     ?assertNot(undefined == global:whereis_name(dtask_timer)).
