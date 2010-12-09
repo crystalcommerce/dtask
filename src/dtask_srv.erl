@@ -42,6 +42,7 @@ start_link(Nodes) ->
                           dtask_node_list:new([]),
                           []).
 
+%%---------------------------------------------------------------------------
 %% @doc
 %%  Evaluates apply(Module, Function, Args) on a remote node that is
 %%  registered with DTask. Returns ok or {error, Reason}. If there are no
@@ -78,15 +79,23 @@ register(Node) ->
 %%  tasks between
 %% @end
 %%---------------------------------------------------------------------------
+-spec init(list()) -> {ok, dtask_node_list:node_list()} |
+                      ignore |
+                      {stop, term()}.
 init(Nodes) ->
     {ok, Nodes}.
 
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
 %% @private
 %% @doc
-%%  handle_call gen_leader callback
+%%  Handling call messages
 %% @end
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
+-spec handle_call(term(), pid(), dtask_node_list:node_list(), gen_leader:election()) ->
+                         {reply, term(), dtask_node_list:node_list()} |
+                         {noreply, dtask_node_list:node_list()} |
+                         {stop, term(), term(), dtask_node_list:node_list()} |
+                         {stop, term(), dtask_node_list:node_list()}.
 handle_call(stop, _From, Nodes, _Election) ->
     {stop, normal, stopped, Nodes};
 
@@ -94,65 +103,155 @@ handle_call({register, Node}, _From, Nodes, _Election) ->
     {reply, ok, dtask_node_list:add(Node, Nodes)};
 
 handle_call({apply, Module, Function, Args}, _From, Nodes, _Election) ->
-    {Response, NewNodes} = apply(Module, Function, Args, Nodes),
+    {Response, NewNodes} = dcall(Module, Function, Args, Nodes),
     {reply, Response, NewNodes}.
 
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
 %% @private
 %% @doc
-%%  handle_cast gen_leader callback
+%%  Handling cast messages
 %% @end
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
+-spec handle_cast(term(), dtask_node_list:node_list(), gen_leader:election()) ->
+                         {noreply, dtask_node_list:node_list()} |
+                         {stop, term(), dtask_node_list:node_list()}.
 handle_cast({apply, Module, Function, Args}, Nodes, _Election) ->
-    {_, NewNodes} = apply(Module, Function, Args, Nodes),
+    NewNodes = dcast(Module, Function, Args, Nodes),
     {noreply, NewNodes}.
 
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
 %% @private
 %% @doc
-%%  handle_info gen_leader callback
+%%  Handling all non call/cast messages
 %% @end
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
+-spec handle_info(term(), dtask_node_list:node_list()) ->
+                         {noreply, dtask_node_list:node_list()} |
+                         {stop, term(), dtask_node_list:node_list()}.
 handle_info(_Info, Nodes) ->
     {noreply, Nodes}.
 
-handle_leader_call(_Request, _From, State, _Election) ->
-    {reply, ok, State}.
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%%  Handling call messages. Called in the leader.
+%% @end
+%%--------------------------------------------------------------------
+-spec handle_leader_call(term(), pid(), dtask_node_list:node_list(), gen_leader:election()) ->
+                                {reply, term(), term(), dtask_node_list:node_list()} |
+                                {reply, term(), dtask_node_list:node_list()} |
+                                {noreply, dtask_node_list:node_list()} |
+                                {stop, term(), term(), dtask_node_list:node_list()} |
+                                {stop, term(), dtask_node_list:node_list()}.
+handle_leader_call(stop, _From, Nodes, _Election) ->
+    {stop, normal, stopped, Nodes};
 
-handle_leader_cast(_Request, State, _Election) ->
-    {noreply, State}.
+handle_leader_call({apply, Module, Function, Args}, _From, Nodes, _Election) ->
+    {Response, NewNodes} = dcall(Module, Function, Args, Nodes),
+    {reply, Response, NewNodes}.
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%%  Handling cast messages. Called in the leader.
+%% @end
+%%--------------------------------------------------------------------
+-spec handle_leader_cast(term(), dtask_node_list:node_list(), gen_leader:election()) ->
+                                {ok, term(), dtask_node_list:node_list()} |
+                                {noreply, dtask_node_list:node_list()} |
+                                {stop, term(), dtask_node_list:node_list()}.
+handle_leader_cast({apply, Module, Function, Args}, Nodes, _Election) ->
+    NewNodes = dcast(Module, Function, Args, Nodes),
+    {noreply, NewNodes}.
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Handling messages from leader.
+%%
+%% @spec from_leader(Request, State, Election) ->
+%%                                    {ok, State} |
+%%                                    {noreply, State} |
+%%                                    {stop, Reason, State}
+%% @end
+%%--------------------------------------------------------------------
 from_leader(_Synch, State, _Election) ->
     {ok, State}.
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Handling nodes going down. Called in the leader only.
+%%
+%% @spec handle_DOWN(Node, State, Election) ->
+%%                                  {ok, State} |
+%%                                  {ok, Broadcast, State} |
+%% @end
+%%--------------------------------------------------------------------
 handle_DOWN(_Node, State, _Election) ->
     {ok, State}.
 
-elected(State, _Election, undefined) ->
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Called only in the leader process when it is elected. The Synch
+%% term will be broadcasted to all the nodes in the cluster.
+%%
+%% @spec elected(Nodes, Election, undefined) -> {ok, Synch, Nodes}
+%% @end
+%%--------------------------------------------------------------------
+elected(Nodes, _Election, undefined) ->
     Synch = [],
-    {ok, Synch, State};
-elected(State, _Election, _Node) ->
-    {reply, [], State}.
+    {ok, Synch, Nodes};
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Called only in the leader process when a new candidate joins the
+%% cluster. The Synch term will be sent to Node.
+%%
+%% @spec elected(Nodes, Election, Node) -> {ok, Synch, Nodes}
+%% @end
+%%--------------------------------------------------------------------
+elected(Nodes, _Election, Node) ->
+    {reply, [], dtask_node_list:add(Node, Nodes)}.
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Called in all members of the cluster except the leader. Synch is a
+%% term returned by the leader in the elected/3 callback.
+%%
+%% @spec surrendered(State, Synch, Election) -> {ok, State}
+%% @end
+%%--------------------------------------------------------------------
 surrendered(State, _Synch, _Election) ->
     {ok, State}.
 
 
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
 %% @private
 %% @doc
-%%  terminate gen_leader callback
+%%  This function is called by a gen_leader when it is about to
+%%  terminate. It should be the opposite of Module:init/1 and do any
+%%  necessary cleaning up. When it returns, the gen_leader terminates
+%%  with Reason. The return value is ignored.
 %% @end
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
+-spec terminate(term(), dtask_node_list:node_list()) ->
+                       ok.
 terminate(_Reason, _Nodes) ->
     ok.
 
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
 %% @private
 %% @doc
-%%  code_change gen_leader callback
+%%  Convert process state when code is changed
 %% @end
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
+-spec code_change(string(), dtask_node_list:node_list(), gen_leader:election(), any()) ->
+                         {ok, dtask_node_list:node_list()} |
+                         {ok, dtask_node_list:node_list(), gen_leader:election()}.
 code_change(_OldVsn, Nodes, _Election, _Extra) ->
     {ok, Nodes}.
 
@@ -160,14 +259,36 @@ code_change(_OldVsn, Nodes, _Election, _Extra) ->
 %% @private
 %% @doc
 %%  Evaluates apply(Module, Function, Args) on a remote node that is
-%%  registerd with DTask.
+%%  registered with DTask.
 %% @end
 %%---------------------------------------------------------------------------
-apply(Module, Function, Args, Nodes) ->
-    case dtask_node_list:is_empty(Nodes) of 
+-spec dcall(module(), atom(), args(), dtask_node_list:node_list()) ->
+                    {any(), dtask_node_list:node_list()} |
+                    {{error, term()}, dtask_node_list:node_list()}.
+dcall(Module, Function, Args, Nodes) ->
+    case dtask_node_list:is_empty(Nodes) of
         true -> 
             {{error, no_node}, Nodes};
         _ -> 
             Result = rpc:call(dtask_node_list:focus(Nodes), Module, Function, Args),
             {Result, dtask_node_list:step(Nodes)}
+    end.
+
+%%---------------------------------------------------------------------------
+%% @private
+%% @doc
+%%  Evaluates apply(Module, Function, Args) on a remote node that is
+%%  registered with DTask asynchronously.
+%% @end
+%%---------------------------------------------------------------------------
+-spec dcast(module(), atom(), args(), dtask_node_list:node_list()) ->
+                   {any(), dtask_node_list:node_list()} |
+                   {{error, term()}, dtask_node_list:node_list()}.
+dcast(Module, Function, Args, Nodes) ->
+    case dtask_node_list:is_empty(Nodes) of
+        true ->
+            {{error, no_node}, Nodes};
+        _ ->
+            rpc:cast(dtask_node_list:focus(Nodes), Module, Function, Args),
+            dtask_node_list:step(Nodes)
     end.
