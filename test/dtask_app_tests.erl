@@ -24,7 +24,11 @@ dtask_timer_is_running() ->
     ?assertNot(undefined == whereis(dtask_timer)).
 
 start_app() ->
-    ok = application:start(dtask).
+    Dir = dtask_test_util:setup_tmp_dir(),
+    dtask_test_util:create_sample_config([node()]),
+    ok = application:start(dtask),
+    Dir.
     
-stop_app(_Arg) ->
-    ok = application:stop(dtask).
+stop_app(TmpDir) ->
+    ok = application:stop(dtask),
+    dtask_test_util:cleanup_tmp_dir(TmpDir).

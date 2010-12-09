@@ -1,4 +1,3 @@
-
 -module(dtask_sup).
 
 -behaviour(supervisor).
@@ -23,10 +22,16 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    Nodes = [node()],
-    {ok, { {one_for_one, 5, 10},
-           [
-            ?WORKER(dtask_srv, Nodes),
-            ?WORKER(dtask_timer, Nodes)
-           ]}}.
+    Config = dtask_config:new(),
+    case dtask_config:get(nodes, Config) of
+        undefined ->
+            error_logger:error_msg("No nodes found in dtask.config\n", []),
+            ignore;
+        Nodes ->
+            {ok, { {one_for_one, 5, 10},
+                   [
+                    ?WORKER(dtask_srv, Nodes),
+                    ?WORKER(dtask_timer, Nodes)
+                   ]}}
+    end.
 
