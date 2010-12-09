@@ -42,7 +42,6 @@ start_link() ->
                           dtask_node_list:new([]),
                           []).
 
-%%---------------------------------------------------------------------------
 %% @doc
 %%  Evaluates apply(Module, Function, Args) on a remote node that is
 %%  registered with DTask. Returns ok or {error, Reason}. If there are no
