@@ -10,14 +10,18 @@
 -export([start/0, stop/0, call/3, cast/3, register/1]).
 
 %%---------------------------------------------------------------------------
-%% @doc Start the mnesia_graphs server.
+%% @doc
+%%  Start the DTask application
+%% @end
 %%---------------------------------------------------------------------------
 -spec start() -> ok | {error, term()}.
 start() ->
     application:start(dtask).
 
 %%---------------------------------------------------------------------------
-%% @doc Stop the mnesia_graphs server.
+%% @doc
+%%  Stop the DTask application
+%% @end
 %%---------------------------------------------------------------------------
 -spec stop() -> ok | {error, term()}.
 stop() ->

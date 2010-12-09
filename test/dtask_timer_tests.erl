@@ -43,14 +43,14 @@ cancel_removes_the_task() ->
     ?assertMatch({error, badarg}, dtask_timer:cancel(TRef)).
 
 start_dtask_timer() ->
-    {ok, Pid} = dtask_timer:start_link(),
+    {ok, Pid} = dtask_timer:start_link([node()]),
     Pid.
 
 stop_dtask_timer(Pid) ->
     gen_server:call(Pid, stop).
 
 start_dtask() ->
-    {ok, Pid} = dtask_srv:start_link(),
+    {ok, Pid} = dtask_srv:start_link([node()]),
     dtask_srv:register(node()),
     Pid.
 

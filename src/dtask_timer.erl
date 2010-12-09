@@ -9,7 +9,7 @@
 -behavior(gen_leader).
 
 %% API
--export([start_link/0, schedule/4, cancel/1]).
+-export([start_link/1, schedule/4, cancel/1]).
 
 %% gen_leader callbacks
 -export([init/1,
@@ -39,9 +39,9 @@
 %%  Starts the DTask server
 %% @end
 %%---------------------------------------------------------------------------
-start_link() ->
+start_link(Nodes) ->
     gen_leader:start_link(?MODULE,
-                          [node()],
+                          Nodes,
                           [],
                           ?MODULE,
                           [],

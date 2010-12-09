@@ -11,7 +11,7 @@
 -behavior(gen_leader).
 
 %% API
--export([start_link/0, call/3, cast/3, register/1]).
+-export([start_link/1, call/3, cast/3, register/1]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -34,9 +34,9 @@
 %%%==========================================================================
 %%% API
 %%%==========================================================================
-start_link() ->
+start_link(Nodes) ->
     gen_leader:start_link(?MODULE,
-                          [node()],
+                          Nodes,
                           [],
                           ?MODULE,
                           dtask_node_list:new([]),

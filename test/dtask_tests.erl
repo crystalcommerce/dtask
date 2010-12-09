@@ -26,7 +26,7 @@ cast_casts_on_the_focused_node() ->
     ?assertMatch(ok, dtask:cast(?MODULE, ping_self, [ping])).
 
 start_dtask_server() ->
-    {ok, Pid} = dtask_srv:start_link(),
+    {ok, Pid} = dtask_srv:start_link([node()]),
     Pid.
 
 stop_dtask_server(Pid) ->

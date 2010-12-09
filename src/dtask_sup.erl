@@ -9,8 +9,7 @@
 %% Supervisor callbacks
 -export([init/1]).
 
-%% Helper macro for declaring children of supervisor
--define(CHILD(I, Type), {I, {I, start_link, []}, permanent, 5000, Type, [I]}).
+-define(WORKER(I, Args), {I, {I, start_link, [Args]}, permanent, 5000, worker, [I]}).
 
 %% ===================================================================
 %% API functions
@@ -24,9 +23,10 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
+    Nodes = [node()],
     {ok, { {one_for_one, 5, 10},
            [
-            ?CHILD(dtask_srv, worker),
-            ?CHILD(dtask_timer, worker)
-           ]} }.
+            ?WORKER(dtask_srv, Nodes),
+            ?WORKER(dtask_timer, Nodes)
+           ]}}.
 
