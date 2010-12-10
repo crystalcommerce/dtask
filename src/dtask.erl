@@ -7,7 +7,7 @@
 %%% @end
 %%%--------------------------------------------------------------------------
 -module(dtask).
--export([start/0, stop/0, call/3, cast/3, register/1]).
+-export([start/0, stop/0, call/3, cast/3]).
 
 %%---------------------------------------------------------------------------
 %% @doc
@@ -48,12 +48,3 @@ call(Module, Function, Args) ->
 -spec cast(module(), term(), dtask_srv:args()) -> ok. 
 cast(Module, Function, Args) ->
     dtask_srv:cast(Module, Function, Args).
-
-%%---------------------------------------------------------------------------
-%% @doc
-%%   Register a node with DTask to distribute the work to.
-%% @end
-%%---------------------------------------------------------------------------
--spec register(node()) -> ok.
-register(Node) ->
-    dtask_srv:register(Node).

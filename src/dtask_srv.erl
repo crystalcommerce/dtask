@@ -11,7 +11,7 @@
 -behavior(gen_leader).
 
 %% API
--export([start_link/1, call/3, cast/3, register/1]).
+-export([start_link/1, call/3, cast/3]).
 
 %% gen_server callbacks
 -export([init/1,
@@ -39,14 +39,13 @@ start_link(Nodes) ->
                           Nodes,
                           [],
                           ?MODULE,
-                          dtask_node_list:new([]),
+                          dtask_node_list:new(Nodes),
                           []).
 
 %%---------------------------------------------------------------------------
 %% @doc
 %%  Evaluates apply(Module, Function, Args) on a remote node that is
-%%  registered with DTask. Returns ok or {error, Reason}. If there are no
-%%  nodes registered with DTask Reason is no_node.
+%%  registered with DTask. Returns ok or {error, Reason}.
 %% @end
 %%---------------------------------------------------------------------------
 -spec call(module(), term(), args()) -> ok | {error, term()}.
@@ -56,17 +55,12 @@ call(Module, Function, Args) ->
 %%---------------------------------------------------------------------------
 %% @doc
 %%  Evaluates apply(Module, Function, Args) asynchronously on a remote node
-%%  that is registered with DTask. Returns ok or {error, Reason}. If there are
-%%  no nodes registered with DTask Reason is no_node.
+%%  that is registered with DTask. Returns ok or {error, Reason}.
 %% @end
 %%---------------------------------------------------------------------------
 -spec cast(module(), term(), args()) -> ok. 
 cast(Module, Function, Args) ->
     gen_leader:cast(?MODULE, {apply, Module, Function, Args}).
-
--spec register(node()) -> ok.
-register(Node) ->
-    gen_leader:call(?MODULE, {register, Node}).
 
 %%%==========================================================================
 %%% gen_leader callbacks
@@ -98,9 +92,6 @@ init(Nodes) ->
                          {stop, term(), dtask_node_list:node_list()}.
 handle_call(stop, _From, Nodes, _Election) ->
     {stop, normal, stopped, Nodes};
-
-handle_call({register, Node}, _From, Nodes, _Election) ->
-    {reply, ok, dtask_node_list:add(Node, Nodes)};
 
 handle_call({apply, Module, Function, Args}, _From, Nodes, _Election) ->
     {Response, NewNodes} = dcall(Module, Function, Args, Nodes),

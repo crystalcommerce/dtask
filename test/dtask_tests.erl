@@ -9,7 +9,6 @@ dtask_test_() ->
      fun start_dtask_server/0,
      fun stop_dtask_server/1,
      [
-      ?_test(call_with_no_node_fails()),
       ?_test(call_calls_on_the_focused_node()),
       ?_test(cast_casts_on_the_focused_node())
      ]}.
@@ -18,11 +17,9 @@ call_with_no_node_fails() ->
     ?assertMatch({error, no_node}, dtask:call(?MODULE, ping_self, [ping])).
 
 call_calls_on_the_focused_node() ->
-    dtask:register(node()),
     ?assertMatch(pong, dtask:call(?MODULE, ping_self, [ping])).
 
 cast_casts_on_the_focused_node() ->
-    dtask:register(node()),
     ?assertMatch(ok, dtask:cast(?MODULE, ping_self, [ping])).
 
 start_dtask_server() ->

@@ -51,7 +51,6 @@ stop_dtask_timer(Pid) ->
 
 start_dtask() ->
     {ok, Pid} = dtask_srv:start_link([node()]),
-    dtask_srv:register(node()),
     Pid.
 
 stop_dtask(Pid) ->
