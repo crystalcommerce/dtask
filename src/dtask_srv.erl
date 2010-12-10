@@ -132,9 +132,10 @@ handle_info(_Info, Nodes) ->
 handle_leader_call(stop, _From, Nodes, _Election) ->
     {stop, normal, stopped, Nodes};
 
-handle_leader_call({apply, Module, Function, Args}, _From, Nodes, _Election) ->
-    {Response, NewNodes} = dcall(Module, Function, Args, Nodes),
-    {reply, Response, NewNodes}.
+handle_leader_call({apply, Module, Function, Args}, _From, Nodes, Election) ->
+    Nodes1 = update_node_list(gen_leader:alive(Election), Nodes),
+    {Response, NewNodes} = dcall(Module, Function, Args, Nodes1),
+    {reply, Response, NewNodes, NewNodes}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -146,8 +147,9 @@ handle_leader_call({apply, Module, Function, Args}, _From, Nodes, _Election) ->
                                 {ok, term(), dtask_node_list:node_list()} |
                                 {noreply, dtask_node_list:node_list()} |
                                 {stop, term(), dtask_node_list:node_list()}.
-handle_leader_cast({apply, Module, Function, Args}, Nodes, _Election) ->
-    NewNodes = dcast(Module, Function, Args, Nodes),
+handle_leader_cast({apply, Module, Function, Args}, Nodes, Election) ->
+    Nodes1 = update_node_list(gen_leader:alive(Election), Nodes),
+    NewNodes = dcast(Module, Function, Args, Nodes1),
     {noreply, NewNodes}.
 
 %%--------------------------------------------------------------------
@@ -160,8 +162,8 @@ handle_leader_cast({apply, Module, Function, Args}, Nodes, _Election) ->
                          {ok, dtask_node_list:node_list()} |
                          {noreply, dtask_node_list:node_list()} |
                          {stop, term(), dtask_node_list:node_list()}.
-from_leader(_Synch, State, _Election) ->
-    {ok, State}.
+from_leader(NodeList, _State, _Election) ->
+    {ok, NodeList}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -187,9 +189,9 @@ handle_DOWN(Node, NodeList, _Election) ->
 -spec elected(dtask_node_list:node_list(), gen_leader:election(), term()) ->
                                        {ok, term(), dtask_node_list:node_list()}.
 elected(Nodes, Election, undefined) ->
-    Synch = [],
     DownNodes = dtask_node_list:new(gen_leader:down(Election)),
-    {ok, Synch, dtask_node_list:difference(Nodes, DownNodes)};
+    NewNodes = dtask_node_list:difference(Nodes, DownNodes),
+    {ok, NewNodes, NewNodes};
 
 %%--------------------------------------------------------------------
 %% @private
@@ -199,7 +201,8 @@ elected(Nodes, Election, undefined) ->
 %% @end
 %%--------------------------------------------------------------------
 elected(Nodes, _Election, Node) ->
-    {reply, [], dtask_node_list:add(Node, Nodes)}.
+    NewNodes = dtask_node_list:add(Node, Nodes),
+    {reply, NewNodes, NewNodes}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -210,9 +213,8 @@ elected(Nodes, _Election, Node) ->
 %%--------------------------------------------------------------------
 -spec surrendered(dtask_node_list:node_list(), term(), gen_leader:election()) ->
                                               {ok, dtask_node_list:node_list()}.
-surrendered(State, _Synch, _Election) ->
-    {ok, State}.
-
+surrendered(_State, LeaderState, _Election) ->
+    {ok, LeaderState}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -277,3 +279,16 @@ dcast(Module, Function, Args, Nodes) ->
             rpc:cast(dtask_node_list:focus(Nodes), Module, Function, Args),
             dtask_node_list:step(Nodes)
     end.
+
+%%---------------------------------------------------------------------------
+%% @private
+%% @doc
+%%  Updates the node list to include any alive nodes that aren't present.
+%% @end
+%%---------------------------------------------------------------------------
+-spec update_node_list(dtask_node_list:node_list(), dtask_node_list:node_list()) ->
+                              dtask_node_list:node_list().
+update_node_list(AliveNodes, NodeList) ->
+    AliveNList = dtask_node_list:new(AliveNodes),
+    Missing = dtask_node_list:difference(AliveNList, NodeList),
+    dtask_node_list:concat(NodeList, Missing).

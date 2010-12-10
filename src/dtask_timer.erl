@@ -140,14 +140,14 @@ handle_info(_Info, S) ->
 handle_leader_call({schedule, Time, Module, Function, Arguments}, 
                    _From, Tasks, _Election) ->
     Task = create_task(Time, Module, Function, Arguments),
-    {reply, {ok, Task#task.id}, [Task | Tasks]};
+    {reply, {ok, Task#task.id}, [Task | Tasks], [Task | Tasks]};
 
 handle_leader_call({cancel, TRef}, _From, Tasks, _Election) ->
     case remove_task(TRef, Tasks) of
         {not_found, _Tasks} ->
             {reply, {error, badarg}, Tasks};
         {_Task, RemainingTasks} ->
-            {reply, {ok, cancel}, RemainingTasks}
+            {reply, {ok, cancel}, RemainingTasks, RemainingTasks}
     end.
 
 %%--------------------------------------------------------------------
@@ -173,8 +173,8 @@ handle_leader_cast(_Request, State, _Election) ->
                          {ok, list(#task{})} |
                          {noreply, list(#task{})} |
                          {stop, term(), list(#task{})}.
-from_leader(_Synch, State, _Election) ->
-    {ok, State}.
+from_leader(LeaderState, _State, _Election) ->
+    {ok, LeaderState}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -198,15 +198,16 @@ handle_DOWN(_Node, State, _Election) ->
 -spec elected(list(#task{}), gen_leader:election(), term()) ->
                                        {ok, term(), list(#task{})}.
 elected(State, _Election, undefined) ->
-    Synch = [],
     NewState = lists:map(fun(Task) -> 
-                Ref = timer:apply_interval(Task#task.timeout, 
-                                            Task#task.module,
-                                            Task#task.function,
-                                            Task#task.arguments),
+                Ref = timer:apply_interval(Task#task.timeout,
+                                           dtask_srv,
+                                           cast,
+                                           [ Task#task.module,
+                                             Task#task.function,
+                                             Task#task.arguments ]),
                 Task#task{id = Ref}
               end, State),
-    {ok, Synch, NewState};
+    {ok, NewState, NewState};
 
 %%--------------------------------------------------------------------
 %% @private
@@ -216,7 +217,7 @@ elected(State, _Election, undefined) ->
 %% @end
 %%--------------------------------------------------------------------
 elected(State, _Election, _Node) ->
-    {reply, [], State}.
+    {reply, State, State}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -227,8 +228,8 @@ elected(State, _Election, _Node) ->
 %%--------------------------------------------------------------------
 -spec surrendered(list(#task{}), term(), gen_leader:election()) ->
                                {ok, list(#task{})}.
-surrendered(State, _Synch, _Election) ->
-    {ok, State}.
+surrendered(_State, LeaderState, _Election) ->
+    {ok, LeaderState}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -241,7 +242,10 @@ surrendered(State, _Synch, _Election) ->
 %%--------------------------------------------------------------------
 -spec terminate(term(), list(#task{})) -> 
                        ok.
-terminate(_Reason, _S) ->
+terminate(_Reason, Tasks) ->
+    lists:foreach(fun(Task) ->
+                          timer:cancel(Task#task.id)
+                  end, Tasks),
     ok.
 
 %%--------------------------------------------------------------------
