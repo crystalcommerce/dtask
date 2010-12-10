@@ -28,7 +28,8 @@
 -record(task, { id        :: timer:tref(),
                 module    :: module(),
                 function  :: term(),
-                arguments :: dtask_srv:args() }).
+                arguments :: dtask_srv:args(),
+                timeout   :: timeout() }).
 
 %%%==========================================================================
 %%% API
@@ -178,9 +179,7 @@ from_leader(_Synch, State, _Election) ->
 %%--------------------------------------------------------------------
 %% @private
 %% @doc
-%%  Handling nodes going down. Called in the leader only. Removes the
-%%  node that went down from the current node list so no work will be
-%%  distributed to it.
+%%  Handling nodes going down. Called in the leader only.
 %% @end
 %%--------------------------------------------------------------------
 -spec handle_DOWN(node(), list(#task{}), gen_leader:election()) ->
@@ -200,7 +199,14 @@ handle_DOWN(_Node, State, _Election) ->
                                        {ok, term(), list(#task{})}.
 elected(State, _Election, undefined) ->
     Synch = [],
-    {ok, Synch, State};
+    NewState = lists:map(fun(Task) -> 
+                Ref = timer:apply_interval(Task#task.timeout, 
+                                            Task#task.module,
+                                            Task#task.function,
+                                            Task#task.arguments),
+                Task#task{id = Ref}
+              end, State),
+    {ok, Synch, NewState};
 
 %%--------------------------------------------------------------------
 %% @private
@@ -263,6 +269,7 @@ create_task(Timeout, Module, Function, Arguments) ->
     #task{ id        = TRef,
            module    = Module,
            function  = Function,
+           timeout   = Timeout,
            arguments = Arguments }.
 
 %%--------------------------------------------------------------------
@@ -275,8 +282,7 @@ create_task(Timeout, Module, Function, Arguments) ->
                                {#task{}, list(#task{})} |
                                {#task{}, list(#task{})}.
 remove_task(TRef, Tasks) ->
-    lists:foldr(fun(Task, {T, Remaining}) ->
-                        case Task#task.id of
+    lists:foldr(fun(Task, {T, Remaining}) -> case Task#task.id of
                             TRef ->
                                 {Task, Remaining};
                             _ ->
