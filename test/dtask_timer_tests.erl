@@ -29,7 +29,7 @@ apply_interval_schedules_task() ->
     ?assertMatch(ok, receive
                          ping -> ok
                      after
-                         100 ->  timeout
+                         200 ->  timeout
                      end).
 
 cancel_returns_error_with_invalid_tref() ->

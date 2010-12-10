@@ -86,11 +86,17 @@ cancel(TRef) ->
 init([]) ->
     {ok, []}.
 
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
 %% @private
 %% @doc
+%%  Handling call messages
 %% @end
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
+-spec handle_call(term(), pid(), list(#task{}), gen_leader:election()) ->
+                         {reply, term(), list(#task{})} |
+                         {noreply, list(#task{})} |
+                         {stop, term(), term(), list(#task{})} |
+                         {stop, term(), list(#task{})}.
 handle_call({schedule, Time, Module, Function, Arguments}, _From, Tasks, _Election) ->
     Task = create_task(Time, Module, Function, Arguments),
     {reply, {ok, Task#task.id}, [Task | Tasks]};
@@ -104,58 +110,143 @@ handle_call({cancel, TRef}, _From, Tasks, _Election) ->
 handle_call(stop, _From, Tasks, _Election) ->
     {stop, normal, stopped, Tasks}.
 
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
 %% @private
 %% @doc
+%%  Handling cast messages
 %% @end
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
+-spec handle_cast(term(), list(#task{}), gen_leader:election()) ->
+                         {noreply, list(#task{})} |
+                         {stop, term(), list(#task{})}.
 handle_cast(stop, S, _Election) ->
     {stop, normal, S};
 handle_cast(_Msg, S, _Election) ->
     {noreply, S}.
 
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
 %% @private
 %% @doc
+%%  Handling all non call/cast messages
 %% @end
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
+-spec handle_info(term(), list(#task{})) -> {noreply, list(#task{})}.
 handle_info(_Info, S) ->
     {noreply, S}.
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%%  Handling call messages. Called in the leader.
+%% @end
+%%--------------------------------------------------------------------
+-spec handle_leader_call(term(), pid(), list(#task{}), gen_leader:election()) ->
+                                {reply, ok, term(), list(#task{})} |
+                                {reply, term(), list(#task{})} |
+                                {noreply, list(#task{})} |
+                                {stop, term(), term(), list(#task{})} |
+                                {stop, term(), list(#task{})}.
 handle_leader_call(_Request, _From, State, _Election) ->
     {reply, ok, State}.
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%%  Handling cast messages. Called in the leader.
+%% @end
+%%--------------------------------------------------------------------
+-spec handle_leader_cast(term(), list(#task{}), gen_leader:election()) ->
+                                {ok, term(), list(#task{})} |
+                                {noreply, list(#task{})} |
+                                {stop, term(), list(#task{})}.
 handle_leader_cast(_Request, State, _Election) ->
     {noreply, State}.
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%%  Handling messages from leader.
+%% @end
+%%--------------------------------------------------------------------
+-spec from_leader(term(), list(#task{}), gen_leader:election()) ->
+                         {ok, list(#task{})} |
+                         {noreply, list(#task{})} |
+                         {stop, term(), list(#task{})}.
 from_leader(_Synch, State, _Election) ->
     {ok, State}.
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%%  Handling nodes going down. Called in the leader only. Removes the
+%%  node that went down from the current node list so no work will be
+%%  distributed to it.
+%% @end
+%%--------------------------------------------------------------------
+-spec handle_DOWN(node(), list(#task{}), gen_leader:election()) ->
+                         {ok, list(#task{})} |
+                         {ok, term(), list(#task{})}.
 handle_DOWN(_Node, State, _Election) ->
     {ok, State}.
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Called only in the leader process when it is elected. The Synch
+%% term will be broadcasted to all the nodes in the cluster.
+%% @end
+%%--------------------------------------------------------------------
+-spec elected(list(#task{}), gen_leader:election(), term()) ->
+                                       {ok, term(), list(#task{})}.
 elected(State, _Election, undefined) ->
     Synch = [],
     {ok, Synch, State};
+
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Called only in the leader process when a new candidate joins the
+%% cluster. The Synch term will be sent to Node.
+%% @end
+%%--------------------------------------------------------------------
 elected(State, _Election, _Node) ->
     {reply, [], State}.
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%% Called in all members of the cluster except the leader. Synch is a
+%% term returned by the leader in the elected/3 callback.
+%% @end
+%%--------------------------------------------------------------------
+-spec surrendered(list(#task{}), term(), gen_leader:election()) ->
+                               {ok, list(#task{})}.
 surrendered(State, _Synch, _Election) ->
     {ok, State}.
 
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
 %% @private
 %% @doc
+%%  This function is called by a gen_leader when it is about to
+%%  terminate. It should be the opposite of Module:init/1 and do any
+%%  necessary cleaning up. When it returns, the gen_leader terminates
+%%  with Reason. The return value is ignored.
 %% @end
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
+-spec terminate(term(), list(#task{})) -> 
+                       ok.
 terminate(_Reason, _S) ->
     ok.
 
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
 %% @private
 %% @doc
+%%  Convert process state when code is changed
 %% @end
-%%---------------------------------------------------------------------------
+%%--------------------------------------------------------------------
+-spec code_change(string(), list(#task{}), gen_leader:election(), any()) ->
+                         {ok, list(#task{})} |
+                         {ok, list(#task{}), gen_leader:election()}.
 code_change(_OldVsn, S, _Election, _Extra) ->
     {ok, S}.
 
@@ -174,6 +265,15 @@ create_task(Timeout, Module, Function, Arguments) ->
            function  = Function,
            arguments = Arguments }.
 
+%%--------------------------------------------------------------------
+%% @private
+%% @doc
+%%  Removes a task from the state by reference.
+%% @end
+%%--------------------------------------------------------------------
+-spec remove_task(timer:tref(), list(#task{})) ->
+                               {#task{}, list(#task{})} |
+                               {#task{}, list(#task{})}.
 remove_task(TRef, Tasks) ->
     lists:foldr(fun(Task, {T, Remaining}) ->
                         case Task#task.id of

@@ -159,13 +159,12 @@ handle_leader_cast({apply, Module, Function, Args}, Nodes, _Election) ->
 %% @private
 %% @doc
 %% Handling messages from leader.
-%%
-%% @spec from_leader(Request, State, Election) ->
-%%                                    {ok, State} |
-%%                                    {noreply, State} |
-%%                                    {stop, Reason, State}
 %% @end
 %%--------------------------------------------------------------------
+-spec from_leader(term(), dtask_node_list:node_list(), gen_leader:election()) ->
+                         {ok, dtask_node_list:node_list()} |
+                         {noreply, dtask_node_list:node_list()} |
+                         {stop, term(), dtask_node_list:node_list()}.
 from_leader(_Synch, State, _Election) ->
     {ok, State}.
 
@@ -175,12 +174,11 @@ from_leader(_Synch, State, _Election) ->
 %%  Handling nodes going down. Called in the leader only. Removes the
 %%  node that went down from the current node list so no work will be
 %%  distributed to it.
-%%
-%% @spec handle_DOWN(Node, State, Election) ->
-%%                                  {ok, State} |
-%%                                  {ok, Broadcast, State} |
 %% @end
 %%--------------------------------------------------------------------
+-spec handle_DOWN(node(), dtask_node_list:node_list(), gen_leader:election()) ->
+                         {ok, dtask_node_list:node_list()} |
+                         {ok, term(), dtask_node_list:node_list()}.
 handle_DOWN(Node, NodeList, _Election) ->
     {ok, dtask_node_list:remove(Node, NodeList)}.
 
@@ -189,10 +187,10 @@ handle_DOWN(Node, NodeList, _Election) ->
 %% @doc
 %% Called only in the leader process when it is elected. The Synch
 %% term will be broadcasted to all the nodes in the cluster.
-%%
-%% @spec elected(Nodes, Election, undefined) -> {ok, Synch, Nodes}
 %% @end
 %%--------------------------------------------------------------------
+-spec elected(dtask_node_list:node_list(), gen_leader:election(), term()) ->
+                                       {ok, term(), dtask_node_list:node_list()}.
 elected(Nodes, Election, undefined) ->
     Synch = [],
     DownNodes = dtask_node_list:new(gen_leader:down(Election)),
@@ -203,8 +201,6 @@ elected(Nodes, Election, undefined) ->
 %% @doc
 %% Called only in the leader process when a new candidate joins the
 %% cluster. The Synch term will be sent to Node.
-%%
-%% @spec elected(Nodes, Election, Node) -> {ok, Synch, Nodes}
 %% @end
 %%--------------------------------------------------------------------
 elected(Nodes, _Election, Node) ->
@@ -215,10 +211,10 @@ elected(Nodes, _Election, Node) ->
 %% @doc
 %% Called in all members of the cluster except the leader. Synch is a
 %% term returned by the leader in the elected/3 callback.
-%%
-%% @spec surrendered(State, Synch, Election) -> {ok, State}
 %% @end
 %%--------------------------------------------------------------------
+-spec surrendered(dtask_node_list:node_list(), term(), gen_leader:election()) ->
+                                              {ok, dtask_node_list:node_list()}.
 surrendered(State, _Synch, _Election) ->
     {ok, State}.
 
