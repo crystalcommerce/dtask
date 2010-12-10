@@ -9,7 +9,7 @@
 -behavior(gen_leader).
 
 %% API
--export([start_link/1, schedule/4, cancel/1]).
+-export([start_link/1, apply_interval/4, cancel/1]).
 
 %% gen_leader callbacks
 -export([init/1,
@@ -56,9 +56,9 @@ start_link(Nodes) ->
 %%  Returns {ok, TRef} or {error, Reason}
 %% @end
 %%---------------------------------------------------------------------------
--spec schedule(timeout(), module(), term(), dtask_srv:args()) ->
+-spec apply_interval(timeout(), module(), term(), dtask_srv:args()) ->
                       {ok, timer:tref()} | {error, term()}.
-schedule(Time, Module, Function, Arguments) ->
+apply_interval(Time, Module, Function, Arguments) ->
     gen_leader:call(?MODULE,
                     {schedule, Time, Module, Function, Arguments}).
 
