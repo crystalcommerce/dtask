@@ -50,7 +50,7 @@ start_link(Nodes) ->
 %%---------------------------------------------------------------------------
 -spec call(module(), term(), args()) -> ok | {error, term()}.
 call(Module, Function, Args) ->
-    gen_leader:call(?MODULE, {apply, Module, Function, Args}).
+    gen_leader:leader_call(?MODULE, {apply, Module, Function, Args}).
 
 %%---------------------------------------------------------------------------
 %% @doc
@@ -60,7 +60,7 @@ call(Module, Function, Args) ->
 %%---------------------------------------------------------------------------
 -spec cast(module(), term(), args()) -> ok. 
 cast(Module, Function, Args) ->
-    gen_leader:cast(?MODULE, {apply, Module, Function, Args}).
+    gen_leader:leader_cast(?MODULE, {apply, Module, Function, Args}).
 
 %%%==========================================================================
 %%% gen_leader callbacks
@@ -91,11 +91,7 @@ init(Nodes) ->
                          {stop, term(), term(), dtask_node_list:node_list()} |
                          {stop, term(), dtask_node_list:node_list()}.
 handle_call(stop, _From, Nodes, _Election) ->
-    {stop, normal, stopped, Nodes};
-
-handle_call({apply, Module, Function, Args}, _From, Nodes, _Election) ->
-    {Response, NewNodes} = dcall(Module, Function, Args, Nodes),
-    {reply, Response, NewNodes}.
+    {stop, normal, stopped, Nodes}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -106,9 +102,8 @@ handle_call({apply, Module, Function, Args}, _From, Nodes, _Election) ->
 -spec handle_cast(term(), dtask_node_list:node_list(), gen_leader:election()) ->
                          {noreply, dtask_node_list:node_list()} |
                          {stop, term(), dtask_node_list:node_list()}.
-handle_cast({apply, Module, Function, Args}, Nodes, _Election) ->
-    NewNodes = dcast(Module, Function, Args, Nodes),
-    {noreply, NewNodes}.
+handle_cast(_Message, Nodes, _Election) ->
+    {noreply, Nodes}.
 
 %%--------------------------------------------------------------------
 %% @private

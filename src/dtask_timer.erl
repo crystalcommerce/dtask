@@ -59,7 +59,7 @@ start_link(Nodes) ->
 -spec apply_interval(timeout(), module(), term(), dtask_srv:args()) ->
                       {ok, timer:tref()} | {error, term()}.
 apply_interval(Time, Module, Function, Arguments) ->
-    gen_leader:call(?MODULE,
+    gen_leader:leader_call(?MODULE,
                     {schedule, Time, Module, Function, Arguments}).
 
 %%---------------------------------------------------------------------------
@@ -72,7 +72,7 @@ apply_interval(Time, Module, Function, Arguments) ->
 %%---------------------------------------------------------------------------
 -spec cancel(timer:tref()) -> {ok, cancel} | {error, term()}.
 cancel(TRef) ->
-    gen_leader:call(?MODULE, {cancel, TRef}).
+    gen_leader:leader_call(?MODULE, {cancel, TRef}).
 
 %%%==========================================================================
 %%% gen_leader callbacks
@@ -97,16 +97,6 @@ init([]) ->
                          {noreply, list(#task{})} |
                          {stop, term(), term(), list(#task{})} |
                          {stop, term(), list(#task{})}.
-handle_call({schedule, Time, Module, Function, Arguments}, _From, Tasks, _Election) ->
-    Task = create_task(Time, Module, Function, Arguments),
-    {reply, {ok, Task#task.id}, [Task | Tasks]};
-handle_call({cancel, TRef}, _From, Tasks, _Election) ->
-    case remove_task(TRef, Tasks) of
-        {not_found, _Tasks} ->
-            {reply, {error, badarg}, Tasks};
-        {_Task, RemainingTasks} ->
-            {reply, {ok, cancel}, RemainingTasks}
-    end;
 handle_call(stop, _From, Tasks, _Election) ->
     {stop, normal, stopped, Tasks}.
 
@@ -146,8 +136,18 @@ handle_info(_Info, S) ->
                                 {noreply, list(#task{})} |
                                 {stop, term(), term(), list(#task{})} |
                                 {stop, term(), list(#task{})}.
-handle_leader_call(_Request, _From, State, _Election) ->
-    {reply, ok, State}.
+handle_leader_call({schedule, Time, Module, Function, Arguments}, 
+                   _From, Tasks, _Election) ->
+    Task = create_task(Time, Module, Function, Arguments),
+    {reply, {ok, Task#task.id}, [Task | Tasks]};
+
+handle_leader_call({cancel, TRef}, _From, Tasks, _Election) ->
+    case remove_task(TRef, Tasks) of
+        {not_found, _Tasks} ->
+            {reply, {error, badarg}, Tasks};
+        {_Task, RemainingTasks} ->
+            {reply, {ok, cancel}, RemainingTasks}
+    end.
 
 %%--------------------------------------------------------------------
 %% @private
