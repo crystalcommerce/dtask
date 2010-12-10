@@ -25,7 +25,8 @@
          terminate/2,
          code_change/4]).
 
--record(task, { id        :: timer:tref(),
+-record(task, { id        :: reference(),
+                timer_id  :: timer:tref(),
                 module    :: module(),
                 function  :: term(),
                 arguments :: dtask_srv:args(),
@@ -205,7 +206,7 @@ elected(State, _Election, undefined) ->
                                            [ Task#task.module,
                                              Task#task.function,
                                              Task#task.arguments ]),
-                Task#task{id = Ref}
+                Task#task{timer_id = Ref}
               end, State),
     {ok, NewState, NewState};
 
@@ -244,7 +245,7 @@ surrendered(_State, LeaderState, _Election) ->
                        ok.
 terminate(_Reason, Tasks) ->
     lists:foreach(fun(Task) ->
-                          timer:cancel(Task#task.id)
+                          timer:cancel(Task#task.timer_id)
                   end, Tasks),
     ok.
 
@@ -270,7 +271,8 @@ create_task(Timeout, Module, Function, Arguments) ->
                                       dtask_srv,
                                       cast,
                                       [Module, Function, Arguments]),
-    #task{ id        = TRef,
+    #task{ id        = make_ref(),
+           timer_id  = TRef,
            module    = Module,
            function  = Function,
            timeout   = Timeout,
