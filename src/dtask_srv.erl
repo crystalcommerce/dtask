@@ -172,15 +172,17 @@ from_leader(_Synch, State, _Election) ->
 %%--------------------------------------------------------------------
 %% @private
 %% @doc
-%% Handling nodes going down. Called in the leader only.
+%%  Handling nodes going down. Called in the leader only. Removes the
+%%  node that went down from the current node list so no work will be
+%%  distributed to it.
 %%
 %% @spec handle_DOWN(Node, State, Election) ->
 %%                                  {ok, State} |
 %%                                  {ok, Broadcast, State} |
 %% @end
 %%--------------------------------------------------------------------
-handle_DOWN(_Node, State, _Election) ->
-    {ok, State}.
+handle_DOWN(Node, NodeList, _Election) ->
+    {ok, dtask_node_list:remove(Node, NodeList)}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -191,9 +193,10 @@ handle_DOWN(_Node, State, _Election) ->
 %% @spec elected(Nodes, Election, undefined) -> {ok, Synch, Nodes}
 %% @end
 %%--------------------------------------------------------------------
-elected(Nodes, _Election, undefined) ->
+elected(Nodes, Election, undefined) ->
     Synch = [],
-    {ok, Synch, Nodes};
+    DownNodes = dtask_node_list:new(gen_leader:down(Election)),
+    {ok, Synch, dtask_node_list:difference(Nodes, DownNodes)};
 
 %%--------------------------------------------------------------------
 %% @private

@@ -13,7 +13,7 @@
 
 % API
 -export([new/1, is_empty/1, focus/1, step/1, size/1, add/2,
-         seek/2, drop/1]).
+         seek/2, drop/1, remove/2, difference/2]).
 
 -type node_list() :: {list(), list()}.
 
@@ -52,8 +52,8 @@ is_empty({_Cursor, List}) ->
 -spec focus(node_list()) -> any() | undefined.
 focus({_Cursor, []}) ->
     undefined;
-focus({Cursor, _List}) ->
-    lists:nth(1, Cursor).
+focus({[Head | _Rest], _List}) ->
+    Head.
 
 %%---------------------------------------------------------------------------
 %% @doc
@@ -123,3 +123,41 @@ drop({[Head | Tail], List}) ->
         _ ->
             {Tail, NewList}
     end.
+
+%%---------------------------------------------------------------------------
+%% @doc
+%%  Remove Node from the nodelist. The focus will stay the same unless the
+%%  node list is currently focused on the element being removed. In this case
+%%  the resultant node list will have the focus on the next element.
+%% @end
+%%---------------------------------------------------------------------------
+-spec remove(any(), node_list()) -> node_list().
+remove(Node, Nodes={[Focus | _Tail], _List}) when Focus == Node ->
+    dtask_node_list:drop(Nodes);
+
+remove(Node, List) ->
+    Focus = dtask_node_list:focus(List),
+    case dtask_node_list:seek(Node, List) of
+        {ok, Nodes} ->
+            {ok, Nodes1} = dtask_node_list:seek(Focus, dtask_node_list:drop(Nodes)),
+            Nodes1;
+        Error ->
+            Error
+    end.
+
+%%---------------------------------------------------------------------------
+%% @doc
+%%  Return a new nodelist containing the set difference between two node list
+%%  arguments
+%% @end
+%%---------------------------------------------------------------------------
+-spec difference(node_list(), node_list()) -> node_list().
+difference(List1, {_, List2Nodes}) ->
+    lists:foldl(fun(Node, Nodes) ->
+                        case remove(Node, Nodes) of
+                            {error, _} ->
+                                Nodes;
+                            Nodes1 ->
+                                Nodes1
+                        end
+                end, List1, List2Nodes).

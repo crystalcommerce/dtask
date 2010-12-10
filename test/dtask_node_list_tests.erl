@@ -20,7 +20,16 @@ node_list_test_() ->
      ?_test(drop_removes_the_current_element()),
      ?_test(step_returns_self_on_empty_list()),
      ?_test(adding_to_empty_list_focuses_new_element()),
-     ?_test(drop_wraps_to_first_element_if_on_last())
+     ?_test(drop_wraps_to_first_element_if_on_last()),
+     ?_test(remove_maintains_the_current_focus()),
+     ?_test(remove_removes_the_element()),
+     ?_test(remove_focus_sets_focus_to_next_element()),
+     ?_test(remove_returns_error_if_element_not_found()),
+     ?_test(removing_the_last_element_makes_a_list_empty()),
+     ?_test(difference_removes_all_elements_from_provided_list()),
+     ?_test(difference_removes_subset_if_not_all_present()),
+     ?_test(difference_with_empty_list_returns_original()),
+     ?_test(difference_with_empty_original_returns_empty())
     ].
 
 focus_on_empty_list_is_undefined() ->
@@ -82,3 +91,54 @@ drop_wraps_to_first_element_if_on_last() ->
     Third = dtask_node_list:step(Second),
     First = dtask_node_list:drop(Third),
     ?assertMatch(a, dtask_node_list:focus(First)).
+
+remove_maintains_the_current_focus() ->
+    List  = dtask_node_list:new([a, b, c, d]),
+    List2 = dtask_node_list:remove(c, List),
+    ?assertMatch(a, dtask_node_list:focus(List2)).
+
+remove_removes_the_element() ->
+    List  = dtask_node_list:new([a, b, c, d]),
+    List2 = dtask_node_list:remove(d, List),
+    ?assertMatch({error, not_found}, dtask_node_list:seek(d, List2)).
+
+remove_focus_sets_focus_to_next_element() ->
+    List  = dtask_node_list:new([a, b, c, d]),
+    List2 = dtask_node_list:remove(a, List),
+    ?assertMatch(b, dtask_node_list:focus(List2)).
+
+remove_returns_error_if_element_not_found() ->
+    List = dtask_node_list:new([]),
+    ?assertMatch({error, not_found}, dtask_node_list:remove(a, List)).
+
+removing_the_last_element_makes_a_list_empty() ->
+    List  = dtask_node_list:new([a]),
+    List2 = dtask_node_list:remove(a, List),
+    ?assert(dtask_node_list:is_empty(List2)).
+
+difference_removes_all_elements_from_provided_list() ->
+    List1 = dtask_node_list:new([a, b, c, d]),
+    List2 = dtask_node_list:new([b, d]),
+    Result = dtask_node_list:difference(List1, List2),
+    ?assertMatch({error, not_found}, dtask_node_list:seek(b, Result)),
+    ?assertMatch({error, not_found}, dtask_node_list:seek(d, Result)),
+    ?assertMatch({ok, _}, dtask_node_list:seek(a, Result)),
+    ?assertMatch({ok, _}, dtask_node_list:seek(c, Result)).
+
+difference_removes_subset_if_not_all_present() ->
+    List1 = dtask_node_list:new([a, b, c]),
+    List2 = dtask_node_list:new([b, d]),
+    Result = dtask_node_list:difference(List1, List2),
+    ?assertMatch({error, not_found}, dtask_node_list:seek(b, Result)),
+    ?assertMatch({ok, _}, dtask_node_list:seek(a, Result)),
+    ?assertMatch({ok, _}, dtask_node_list:seek(c, Result)).
+
+difference_with_empty_list_returns_original() ->
+    List1 = dtask_node_list:new([a, b, c ,d]),
+    List2 = dtask_node_list:new([]),
+    ?assertMatch(List1, dtask_node_list:difference(List1, List2)).
+
+difference_with_empty_original_returns_empty() ->
+    List1 = dtask_node_list:new([]),
+    List2 = dtask_node_list:new([a, b, c ,d]),
+    ?assertMatch(List1, dtask_node_list:difference(List1, List2)).
