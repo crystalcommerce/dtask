@@ -29,7 +29,10 @@ node_list_test_() ->
      ?_test(difference_removes_all_elements_from_provided_list()),
      ?_test(difference_removes_subset_if_not_all_present()),
      ?_test(difference_with_empty_list_returns_original()),
-     ?_test(difference_with_empty_original_returns_empty())
+     ?_test(difference_with_empty_original_returns_empty()),
+     ?_test(concat_adds_all_elements()),
+     ?_test(concat_with_empty_list_returns_original()),
+     ?_test(concat_with_empty_original_returns_other())
     ].
 
 focus_on_empty_list_is_undefined() ->
@@ -142,3 +145,22 @@ difference_with_empty_original_returns_empty() ->
     List1 = dtask_node_list:new([]),
     List2 = dtask_node_list:new([a, b, c ,d]),
     ?assertMatch(List1, dtask_node_list:difference(List1, List2)).
+
+concat_adds_all_elements() ->
+    List1 = dtask_node_list:new([a, b]),
+    List2 = dtask_node_list:new([c, d]),
+    Result = dtask_node_list:concat(List1, List2),
+    ?assertMatch({ok, _}, dtask_node_list:seek(a, Result)),
+    ?assertMatch({ok, _}, dtask_node_list:seek(b, Result)),
+    ?assertMatch({ok, _}, dtask_node_list:seek(c, Result)),
+    ?assertMatch({ok, _}, dtask_node_list:seek(d, Result)).
+
+concat_with_empty_list_returns_original() ->
+    List1 = dtask_node_list:new([a, b, c ,d]),
+    List2 = dtask_node_list:new([]),
+    ?assertMatch(List1, dtask_node_list:concat(List1, List2)).
+
+concat_with_empty_original_returns_other() ->
+    List1 = dtask_node_list:new([]),
+    List2 = dtask_node_list:new([a, b, c ,d]),
+    ?assertMatch(List2, dtask_node_list:concat(List1, List2)).

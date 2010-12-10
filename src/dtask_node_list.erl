@@ -13,7 +13,7 @@
 
 % API
 -export([new/1, is_empty/1, focus/1, step/1, size/1, add/2,
-         seek/2, drop/1, remove/2, difference/2]).
+         seek/2, drop/1, remove/2, difference/2, concat/2]).
 
 -type node_list() :: {list(), list()}.
 
@@ -161,3 +161,19 @@ difference(List1, {_, List2Nodes}) ->
                                 Nodes1
                         end
                 end, List1, List2Nodes).
+
+%%---------------------------------------------------------------------------
+%% @doc
+%%  Return a new nodelist containing the elements of List1 and the elements of
+%%  List2. The focus will remain where it was on List1. If there is an entry
+%%  that is the same in both lists the returned list will contain a duplicate
+%% @end
+%%---------------------------------------------------------------------------
+-spec concat(node_list(), node_list()) -> node_list().
+concat({[], []}, List2) ->
+    List2;
+
+concat({[Focus | _T], List1}, {_, List2}) ->
+    NodeList = new(List1 ++ List2),
+    {ok, New} = seek(Focus, NodeList),
+    New.
