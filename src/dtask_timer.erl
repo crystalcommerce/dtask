@@ -95,10 +95,7 @@ init([]) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec handle_call(term(), pid(), list(#task{}), gen_leader:election()) ->
-                         {reply, term(), list(#task{})} |
-                         {noreply, list(#task{})} |
-                         {stop, term(), term(), list(#task{})} |
-                         {stop, term(), list(#task{})}.
+                         {stop, term(), term(), list(#task{})}.
 handle_call(stop, _From, Tasks, _Election) ->
     {stop, normal, stopped, Tasks}.
 
@@ -133,11 +130,8 @@ handle_info(_Info, S) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec handle_leader_call(term(), pid(), list(#task{}), gen_leader:election()) ->
-                                {reply, ok, term(), list(#task{})} |
-                                {reply, term(), list(#task{})} |
-                                {noreply, list(#task{})} |
-                                {stop, term(), term(), list(#task{})} |
-                                {stop, term(), list(#task{})}.
+                                {reply, term(), term(), list(#task{})} |
+                                {reply, term(), list(#task{})}.
 handle_leader_call({schedule, Time, Module, Function, Arguments}, 
                    _From, Tasks, _Election) ->
     Task = create_task(Time, Module, Function, Arguments),
@@ -158,9 +152,7 @@ handle_leader_call({cancel, TRef}, _From, Tasks, _Election) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec handle_leader_cast(term(), list(#task{}), gen_leader:election()) ->
-                                {ok, term(), list(#task{})} |
-                                {noreply, list(#task{})} |
-                                {stop, term(), list(#task{})}.
+                                {noreply, list(#task{})}.
 handle_leader_cast(_Request, State, _Election) ->
     {noreply, State}.
 
@@ -171,9 +163,7 @@ handle_leader_cast(_Request, State, _Election) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec from_leader(term(), list(#task{}), gen_leader:election()) ->
-                         {ok, list(#task{})} |
-                         {noreply, list(#task{})} |
-                         {stop, term(), list(#task{})}.
+                         {ok, list(#task{})}.
 from_leader(LeaderState, _State, _Election) ->
     {ok, LeaderState}.
 
@@ -184,8 +174,7 @@ from_leader(LeaderState, _State, _Election) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec handle_DOWN(node(), list(#task{}), gen_leader:election()) ->
-                         {ok, list(#task{})} |
-                         {ok, term(), list(#task{})}.
+                         {ok, list(#task{})}.
 handle_DOWN(_Node, State, _Election) ->
     {ok, State}.
 
@@ -256,8 +245,7 @@ terminate(_Reason, Tasks) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec code_change(string(), list(#task{}), gen_leader:election(), any()) ->
-                         {ok, list(#task{})} |
-                         {ok, list(#task{}), gen_leader:election()}.
+                         {ok, list(#task{})}.
 code_change(_OldVsn, S, _Election, _Extra) ->
     {ok, S}.
 
@@ -285,8 +273,8 @@ create_task(Timeout, Module, Function, Arguments) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec remove_task(timer:tref(), list(#task{})) ->
-                               {#task{}, list(#task{})} |
-                               {#task{}, list(#task{})}.
+                         {#task{}, list(#task{})} |
+                         {not_found, list(#task{})}.
 remove_task(TRef, Tasks) ->
     lists:foldr(fun(Task, {T, Remaining}) -> case Task#task.id of
                             TRef ->

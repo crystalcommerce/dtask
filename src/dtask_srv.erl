@@ -73,9 +73,7 @@ cast(Module, Function, Args) ->
 %%  tasks between
 %% @end
 %%---------------------------------------------------------------------------
--spec init(list()) -> {ok, dtask_node_list:node_list()} |
-                      ignore |
-                      {stop, term()}.
+-spec init(list()) -> {ok, dtask_node_list:node_list()}.
 init(Nodes) ->
     {ok, Nodes}.
 
@@ -86,10 +84,7 @@ init(Nodes) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec handle_call(term(), pid(), dtask_node_list:node_list(), gen_leader:election()) ->
-                         {reply, term(), dtask_node_list:node_list()} |
-                         {noreply, dtask_node_list:node_list()} |
-                         {stop, term(), term(), dtask_node_list:node_list()} |
-                         {stop, term(), dtask_node_list:node_list()}.
+                         {stop, term(), term(), dtask_node_list:node_list()}.
 handle_call(stop, _From, Nodes, _Election) ->
     {stop, normal, stopped, Nodes}.
 
@@ -100,8 +95,7 @@ handle_call(stop, _From, Nodes, _Election) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec handle_cast(term(), dtask_node_list:node_list(), gen_leader:election()) ->
-                         {noreply, dtask_node_list:node_list()} |
-                         {stop, term(), dtask_node_list:node_list()}.
+                         {noreply, dtask_node_list:node_list()}.
 handle_cast(_Message, Nodes, _Election) ->
     {noreply, Nodes}.
 
@@ -112,8 +106,7 @@ handle_cast(_Message, Nodes, _Election) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec handle_info(term(), dtask_node_list:node_list()) ->
-                         {noreply, dtask_node_list:node_list()} |
-                         {stop, term(), dtask_node_list:node_list()}.
+                         {noreply, dtask_node_list:node_list()}.
 handle_info(_Info, Nodes) ->
     {noreply, Nodes}.
 
@@ -125,10 +118,7 @@ handle_info(_Info, Nodes) ->
 %%--------------------------------------------------------------------
 -spec handle_leader_call(term(), pid(), dtask_node_list:node_list(), gen_leader:election()) ->
                                 {reply, term(), term(), dtask_node_list:node_list()} |
-                                {reply, term(), dtask_node_list:node_list()} |
-                                {noreply, dtask_node_list:node_list()} |
-                                {stop, term(), term(), dtask_node_list:node_list()} |
-                                {stop, term(), dtask_node_list:node_list()}.
+                                {stop, term(), term(), dtask_node_list:node_list()}.
 handle_leader_call(stop, _From, Nodes, _Election) ->
     {stop, normal, stopped, Nodes};
 
@@ -144,9 +134,7 @@ handle_leader_call({apply, Module, Function, Args}, _From, Nodes, Election) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec handle_leader_cast(term(), dtask_node_list:node_list(), gen_leader:election()) ->
-                                {ok, term(), dtask_node_list:node_list()} |
-                                {noreply, dtask_node_list:node_list()} |
-                                {stop, term(), dtask_node_list:node_list()}.
+                                {noreply, dtask_node_list:node_list()}.
 handle_leader_cast({apply, Module, Function, Args}, Nodes, Election) ->
     Nodes1 = update_node_list(gen_leader:alive(Election), Nodes),
     NewNodes = dcast(Module, Function, Args, Nodes1),
@@ -159,9 +147,7 @@ handle_leader_cast({apply, Module, Function, Args}, Nodes, Election) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec from_leader(term(), dtask_node_list:node_list(), gen_leader:election()) ->
-                         {ok, dtask_node_list:node_list()} |
-                         {noreply, dtask_node_list:node_list()} |
-                         {stop, term(), dtask_node_list:node_list()}.
+                         {ok, dtask_node_list:node_list()}.
 from_leader(NodeList, _State, _Election) ->
     {ok, NodeList}.
 
@@ -174,8 +160,7 @@ from_leader(NodeList, _State, _Election) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec handle_DOWN(node(), dtask_node_list:node_list(), gen_leader:election()) ->
-                         {ok, dtask_node_list:node_list()} |
-                         {ok, term(), dtask_node_list:node_list()}.
+                         {ok, dtask_node_list:node_list()}.
 handle_DOWN(Node, NodeList, _Election) ->
     {ok, dtask_node_list:remove(Node, NodeList)}.
 
@@ -237,8 +222,7 @@ terminate(_Reason, _Nodes) ->
 %% @end
 %%--------------------------------------------------------------------
 -spec code_change(string(), dtask_node_list:node_list(), gen_leader:election(), any()) ->
-                         {ok, dtask_node_list:node_list()} |
-                         {ok, dtask_node_list:node_list(), gen_leader:election()}.
+                         {ok, dtask_node_list:node_list()}.
 code_change(_OldVsn, Nodes, _Election, _Extra) ->
     {ok, Nodes}.
 

@@ -131,7 +131,8 @@ drop({[Head | Tail], List}) ->
 %%  the resultant node list will have the focus on the next element.
 %% @end
 %%---------------------------------------------------------------------------
--spec remove(any(), node_list()) -> node_list().
+-spec remove(any(), node_list()) -> node_list() |
+                                    {error, term()}.
 remove(Node, Nodes={[Focus | _Tail], _List}) when Focus == Node ->
     dtask_node_list:drop(Nodes);
 
