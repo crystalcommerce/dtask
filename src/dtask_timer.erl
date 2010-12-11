@@ -72,9 +72,9 @@ apply_interval(Time, Module, Function, Arguments) ->
 %%  Returns {ok, cancel} or {error, Reason}
 %% @end
 %%---------------------------------------------------------------------------
--spec cancel(timer:tref()) -> {ok, cancel} | {error, term()}.
-cancel(TRef) ->
-    gen_leader:leader_call(?MODULE, {cancel, TRef}).
+-spec cancel(reference()) -> {ok, cancel} | {error, term()}.
+cancel(Ref) ->
+    gen_leader:leader_call(?MODULE, {cancel, Ref}).
 
 %%%==========================================================================
 %%% gen_leader callbacks
@@ -137,8 +137,8 @@ handle_leader_call({schedule, Time, Module, Function, Arguments},
     Task = create_task(Time, Module, Function, Arguments),
     {reply, {ok, Task#task.id}, [Task | Tasks], [Task | Tasks]};
 
-handle_leader_call({cancel, TRef}, _From, Tasks, _Election) ->
-    case remove_task(TRef, Tasks) of
+handle_leader_call({cancel, Ref}, _From, Tasks, _Election) ->
+    case remove_task(Ref, Tasks) of
         {not_found, _Tasks} ->
             {reply, {error, badarg}, Tasks};
         {_Task, RemainingTasks} ->
@@ -272,12 +272,14 @@ create_task(Timeout, Module, Function, Arguments) ->
 %%  Removes a task from the state by reference.
 %% @end
 %%--------------------------------------------------------------------
--spec remove_task(timer:tref(), list(#task{})) ->
+-spec remove_task(reference(), list(#task{})) ->
                          {#task{}, list(#task{})} |
                          {not_found, list(#task{})}.
-remove_task(TRef, Tasks) ->
-    lists:foldr(fun(Task, {T, Remaining}) -> case Task#task.id of
-                            TRef ->
+remove_task(Ref, Tasks) ->
+    lists:foldr(fun(Task, {T, Remaining}) ->
+                        case Task#task.id of
+                            Ref ->
+                                timer:cancel(Task#task.timer_id),
                                 {Task, Remaining};
                             _ ->
                                 {T, [Task | Remaining]}

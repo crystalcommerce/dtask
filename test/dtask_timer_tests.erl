@@ -15,7 +15,8 @@ dtask_timer_test_() ->
        ?_test(apply_interval_creates_task()),
        ?_test(apply_interval_schedules_task()),
        ?_test(cancel_returns_error_with_invalid_tref()),
-       ?_test(cancel_removes_the_task())
+       ?_test(cancel_removes_the_task()),
+       ?_test(cancel_stops_the_erlang_timer())
       ]}
     }.
 
@@ -41,6 +42,16 @@ cancel_removes_the_task() ->
     {ok, cancel} = dtask_timer:cancel(TRef),
     {ok, cancel} = dtask_timer:cancel(LeaveAlone),
     ?assertMatch({error, badarg}, dtask_timer:cancel(TRef)).
+
+cancel_stops_the_erlang_timer() ->
+    {ok, Ref} = dtask_timer:apply_interval(200, ?MODULE, ping, [self()]),
+    {ok, cancel} = dtask_timer:cancel(Ref),
+    ?assertMatch(timeout, receive
+                              ping -> ok
+                          after
+                              500 -> timeout
+                          end).
+
 
 start_dtask_timer() ->
     {ok, Pid} = dtask_timer:start_link([node()]),
