@@ -13,7 +13,13 @@
 -spec new() -> config().
 new() ->
     {ok, Dir} = file:get_cwd(),
-    File = filename:join([Dir, "dtask.config"]),
+    ConfigName = case application:get_env(dtask, config) of
+                     undefined ->
+                         "dtask.config";
+                     {ok, Path} ->
+                         Path
+                 end,
+    File = filename:join([Dir, ConfigName]),
     case file:consult(File) of
         {ok, Terms} ->
             Terms;
