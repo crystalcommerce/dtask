@@ -1,12 +1,15 @@
+%% -*- erlang -*-
 {application, dtask,
  [
   {description, "Distributed task executor"},
   {vsn, "0.1"},
   {registered, []},
-  {included_applications, [gen_leader]},
+  {included_applications, []},
   {applications, [
                   kernel,
-                  stdlib
+                  stdlib,
+                  sasl,
+                  gen_leader
                  ]},
   {mod, { dtask_app, []}},
   {env, []}
