@@ -26,7 +26,7 @@ init([]) ->
         undefined ->
             error_logger:error_msg("No nodes found for dtask in config", []),
             {error, no_config};
-        Nodes ->
+        {ok, Nodes} ->
             {ok, { {one_for_one, 5, 10},
                    [
                     ?WORKER(dtask_srv, Nodes),
