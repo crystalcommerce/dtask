@@ -26,7 +26,7 @@ init([]) ->
     case dtask_config:get(nodes, Config) of
         undefined ->
             error_logger:error_msg("No nodes found in dtask.config\n", []),
-            ignore;
+            {error, no_config};
         Nodes ->
             {ok, { {one_for_one, 5, 10},
                    [
@@ -34,4 +34,3 @@ init([]) ->
                     ?WORKER(dtask_timer, Nodes)
                    ]}}
     end.
-
