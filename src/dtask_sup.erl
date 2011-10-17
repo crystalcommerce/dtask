@@ -22,10 +22,9 @@ start_link() ->
 %% ===================================================================
 
 init([]) ->
-    Config = dtask_config:new(),
-    case dtask_config:get(nodes, Config) of
+    case application:get_env(dtask, nodes) of
         undefined ->
-            error_logger:error_msg("No nodes found in dtask.config\n", []),
+            error_logger:error_msg("No nodes found for dtask in config", []),
             {error, no_config};
         Nodes ->
             {ok, { {one_for_one, 5, 10},
